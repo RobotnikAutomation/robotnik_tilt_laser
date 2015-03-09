@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<launch>
+  
+  <!-- TILTING HOKUYO -->
+  
+  <!-- start hokuyo node -->
+  <include file="$(find robotnik_tilt_laser)/launch/hokuyo_urg_04lx.launch"/>
+  <!-- include file="$(find robotnik_tilt_laser)/launch/hokuyo_utm30.launch"/ -->   
+
+  <!-- start a fixed transform base_link->laser -->
+  <!-- this transform is needed when testing the device alone (no robot_state_publisher) -->
+  <!-- node pkg="tf" type="static_transform_publisher" name="tf_base_link_2_laser" args="0.46781 0 0.24299 0 0 0 /base_link /laser_tilt_mount_link 100"/ -->
+  
+  <node type="laser_scan_assembler" pkg="laser_assembler" name="my_laser_assembler">
+    <remap from="scan" to="scan"/>
+    <param name="max_scans" type="int" value="400"/>
+    <!-- param name="fixed_frame" type="string" value="base_link" / -->
+    <param name="fixed_frame" type="string" value="laser_tilt_mount_link" />
+    <param name="tf_cache_time_secs" type="double" value="10.0" />
+    <param name="ignore_laser_skew" type="bool" value="true" />     
+  </node>
+  
+  <!-- load parameters -->
+  <rosparam command="load" file="$(find robotnik_tilt_laser)/launch/robotnik_tilt_laser_cloud.yaml"/>
+  
+  <!-- needed to test tf from laser->tilt_laser -->
+  <node name="robotnik_tilt_laser_cloud" pkg="robotnik_tilt_laser" type="robotnik_tilt_laser_cloud_node" output="screen"/>
+  
+</launch>
+

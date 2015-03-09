@@ -1,0 +1,22 @@
+<?xml version="1.0"?>  
+<launch>
+
+  <!-- HOKUYO -->
+  <node name="hokuyo" pkg="hokuyo_node" type="hokuyo_node" respawn="false" output="screen">
+  
+    <!-- Starts up faster, but timestamps will be inaccurate. --> 
+    <param name="calibrate_time" type="bool" value="false"/> 
+    
+    <!-- Set the port to connect to here -->
+    <param name="port" type="string" value="/dev/ttyACM1"/>
+    <param name="intensity" type="bool" value="false"/>
+
+    <!-- Set frame_id tilt -->
+    <param name="frame_id" value="hokuyo_frontal_laser_link"/>
+
+    <param name="min_ang" value="-2.094395102"/>
+    <param name="max_ang" value="2.094395102"/>
+
+  </node> 
+
+</launch>

@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<package>
+  <name>robotnik_tilt_laser</name>
+  <version>1.0.0</version>
+  <description>
+     robotnik_tilt_laser - controls Hokuyo UTM30LX and Dynamixel PRO H42 servo to get robot front point clouds
+  </description>
+
+  <!-- One maintainer tag required, multiple allowed, one person per tag --> 
+  <maintainer email="rguzman@robotnik.es">Roberto Guzmán</maintainer>
+  <author email="rguzman@robotnik.es">Roberto Guzmán</author>
+  
+  <!-- One license tag required, multiple allowed, one license per tag -->
+  <license>BSD</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>self_test</build_depend>
+  <build_depend>diagnostic_updater</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>std_srvs</build_depend>
+  <build_depend>laser_assembler</build_depend>
+  <build_depend>robotnik_msgs</build_depend>
+  
+  <run_depend>roscpp</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>self_test</run_depend>  
+  <run_depend>diagnostic_updater</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>std_srvs</run_depend>
+  <run_depend>laser_assembler</run_depend>
+  <run_depend>robotnik_msgs</run_depend>
+  
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- You can specify that this package is a metapackage here: -->
+    <!-- <metapackage/> -->
+    <!-- Other tools can request additional information be placed here -->
+  </export>
+</package>
