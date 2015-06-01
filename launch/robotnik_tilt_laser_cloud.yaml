@@ -2,9 +2,12 @@ robotnik_tilt_laser_cloud:
   port:  /dev/ttyUSB_DXL
   #base_laser_frame_id: laser
   #tilt_laser_frame_id: tilt_laser
-  base_laser_frame_id: laser_tilt_mount_link
-  tilt_laser_frame_id: laser_tilt_link
-  joint_name: laser_tilt_joint
+  #base_laser_frame_id: laser_tilt_mount_link
+  #tilt_laser_frame_id: laser_tilt_link
+  base_laser_frame_id: hokuyo_mount_link
+  tilt_laser_frame_id: hokuyo_laser_link
+  #joint_name: laser_tilt_joint
+  joint_name: joint_tilt_laser
 
   publish_tf: false
   publish_joint: true

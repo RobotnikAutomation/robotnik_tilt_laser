@@ -1,38 +1,11 @@
 /** \file robotnik_tilt_laser.cpp
  * \author Robotnik Automation S.L.L.
- * \version 1.0
+ * \version 2.0
  * \date    2014
  *
  * \brief robotnik_tilt_laser ros node
  * Component to manage the robotnik tilting laser = hokuyo laser + dynamixel pro motor
- *
- * Copyright (c) 2014, Robotnik Automation, SLL
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Robotnik Automation, SLL. nor the names of its
- *       contributors may be used to endorse or promote products derived from
- *       this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- * 
+ * (C) 2014 Robotnik Automation, SLL
  * uses ROBOTS Dynamixel PRO SDK
 */
 #include <string.h>
@@ -43,6 +16,7 @@
 #include <math.h>
 #include <cstdlib>
 
+//#include "ros/time.h"
 #include "self_test/self_test.h"
 #include "diagnostic_msgs/DiagnosticStatus.h"
 #include "diagnostic_updater/diagnostic_updater.h"
@@ -379,7 +353,16 @@ void controller_diagnostic(diagnostic_updater::DiagnosticStatusWrapper &stat)
 void check_command_subscriber(diagnostic_updater::DiagnosticStatusWrapper &stat)
 {
 	ros::Time current_time = ros::Time::now();
-
+/*
+	double diff = (current_time - last_command_time).toSec();
+	if(diff > 1.0){
+		stat.summary(diagnostic_msgs::DiagnosticStatus::WARN, "Topic is not receiving commands");
+		//ROS_INFO("check_command_subscriber: %lf seconds without commands", diff);
+	 	// if (driver) driver->SetDesiredSpeed(0.0, 0.0);
+	}else{
+		stat.summary(diagnostic_msgs::DiagnosticStatus::OK, "Topic receiving commands");
+	}
+*/
 }
 
 /*!	\fn laser_tilt_node::process_error_code

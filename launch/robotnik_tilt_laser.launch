@@ -24,7 +24,7 @@
     <param name="fixed_frame" type="string" value="base_link" />
   </node>
   
-  <node type="periodic_snapshotter" pkg="laser_assembler" name="periodic_snaphotter"/>
+  <!-- node type="periodic_snapshotter" pkg="laser_assembler" name="periodic_snaphotter"/ -->
 
 </launch>
 
