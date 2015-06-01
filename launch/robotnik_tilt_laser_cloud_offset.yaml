@@ -1,0 +1,16 @@
+robotnik_tilt_laser_cloud:
+  port:  /dev/ttyUSB_DXL
+  #base_laser_frame_id: laser
+  #tilt_laser_frame_id: tilt_laser
+  base_laser_frame_id: laser_tilt_mount_link
+  tilt_laser_frame_id: laser_tilt_link
+  joint_name: laser_tilt_joint
+
+  publish_tf: true
+  publish_joint: true
+
+  # displacement from base_laser_frame_id to tilt_laser_fram_id (if exists) [m]
+  x_offset:  -0.048    
+  y_offset:  0.0      
+  z_offset:  0.06
+  velocity: 1000
