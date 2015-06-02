@@ -163,6 +163,7 @@ public:
 	ros::ServiceServer srv_home_;
 	//! Ros service set target position
 	ros::ServiceServer srv_setpos_;
+	ros::ServiceServer srv_setpos_pps_;
 	ros::ServiceServer srv_setpos_degrees_;
 	//! Ros service set velocity
 	ros::ServiceServer srv_setvel_;
@@ -260,6 +261,7 @@ laser_tilt_node(ros::NodeHandle h) : self_test_(), diagnostic_(),
 	srv_home_ = private_node_handle_.advertiseService("home", &laser_tilt_node::srvCallback_Home, this);
     //! Service to set target pos
 	srv_setpos_ = private_node_handle_.advertiseService("set_position", &laser_tilt_node::srvCallback_SetPosition, this);
+	srv_setpos_pps_ = private_node_handle_.advertiseService("set_position_pps", &laser_tilt_node::srvCallback_SetPositionPPS, this);
 	srv_setpos_degrees_ = private_node_handle_.advertiseService("set_position_degrees", &laser_tilt_node::srvCallback_SetPositionDegrees, this);
 	//! Service to set target vel
 	srv_setvel_= private_node_handle_.advertiseService("set_velocity", &laser_tilt_node::srvCallback_SetVelocity, this);
@@ -416,6 +418,16 @@ bool srvCallback_Home(std_srvs::Empty::Request& request, std_srvs::Empty::Respon
 	iState_ = STATE_HOME;
         ROS_INFO("laser_tilt_node:: HOME");
 	return true;
+}
+
+bool srvCallback_SetPositionPPS(robotnik_msgs::set_float_value::Request  &req,
+            robotnik_msgs::set_float_value::Response &res)
+{
+  target_position_pps_ = req.value;
+  res.ret = true;
+  iState_ = STATE_POSITION;
+  ROS_INFO("set_position : %5.2f", target_position_pps_);
+  return true;
 }
 
 bool srvCallback_SetPositionDegrees(robotnik_msgs::set_float_value::Request  &req,
