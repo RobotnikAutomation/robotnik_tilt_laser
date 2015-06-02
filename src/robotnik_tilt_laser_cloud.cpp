@@ -43,6 +43,7 @@
 #include <math.h>
 #include <cstdlib>
 
+//#include "ros/time.h"
 #include "self_test/self_test.h"
 #include "diagnostic_msgs/DiagnosticStatus.h"
 #include "diagnostic_updater/diagnostic_updater.h"
@@ -72,9 +73,9 @@
 
 //#define  TILT_ANGLE_UP_DEG  11.85   // Tilting angle +      (10000)  home = -31000
 //#define  TILT_ANGLE_DOWN_DEG -100.74  // Titlting angle -   (-85000)
-#define  TILT_ANGLE_HOME_PPS -31000
-#define  TILT_ANGLE_UP_PPS   10000   // (TILT_ANGLE_UP_DEG / PPS2DEG)
-#define  TILT_ANGLE_DOWN_PPS -85000  // (TILT_ANGLE_DOWN_DEG / PPS2DEG)
+//#define  tilt_angle_home_pps_ -31000
+//#define  tilt_angle_up_pps_   10000   // (TILT_ANGLE_UP_DEG / PPS2DEG)
+//#define  tilt_angle_down_pps_ -85000  // (TILT_ANGLE_DOWN_DEG / PPS2DEG)
 
 
 // Control table addresses
@@ -178,6 +179,9 @@ public:
     bool publish_tf_;
     bool publish_joint_;
     std::string joint_name_;
+    int tilt_angle_home_pps_;
+    int tilt_angle_up_pps_;
+    int tilt_angle_down_pps_;
 
 	// Cloud publish
 	ros::Publisher cloud_pub_;
@@ -196,7 +200,7 @@ laser_tilt_node(ros::NodeHandle h) : self_test_(), diagnostic_(),
 {
     running = false;
     ros::NodeHandle laser_tilt_node_handle(node_handle_, "laser_tilt_node");
-    private_node_handle_.param<std::string>("port", port_, "/dev/ttyUSB0");
+    private_node_handle_.param<std::string>("port", port_, "/dev/ttyUSB_DXL");
     private_node_handle_.param<std::string>("base_laser_frame_id", base_laser_frame_id, "laser");
     private_node_handle_.param<std::string>("tilt_laser_frame_id", tilt_laser_frame_id, "tilt_laser");
     private_node_handle_.param<double>("x_offset", x_offset_, 0.0);
@@ -207,8 +211,11 @@ laser_tilt_node(ros::NodeHandle h) : self_test_(), diagnostic_(),
 	//! Publish transform
     private_node_handle_.param("publish_tf", publish_tf_, true);
 	//! Publish transform
-    private_node_handle_.param("publish_joint", publish_joint_, false);
-    private_node_handle_.param<std::string>("joint_name", joint_name_, "hokuyo_frontal_laser_rotation_joint");
+    private_node_handle_.param("publish_joint", publish_joint_, true);
+    private_node_handle_.param("tilt_angle_home_pps", tilt_angle_home_pps_, -31000);
+    private_node_handle_.param("tilt_angle_up_pps", tilt_angle_up_pps_, 10000);
+    private_node_handle_.param("tilt_angle_down_pps", tilt_angle_down_pps_, -85000);
+    private_node_handle_.param<std::string>("joint_name", joint_name_, "hokuyo_front_laser_tilt_joint");
     if (publish_tf_) ROS_INFO("laser_tilt_node - configured to publish tf");
     if (publish_joint_) ROS_INFO("laser_tilt_node - configured to publish joint_states");
 
@@ -469,7 +476,7 @@ int read_and_publish()
 		case STATE_HOME: 
 				{
 				// set initial Goal Position to 0
-				int GoalPos = TILT_ANGLE_HOME_PPS;
+				int GoalPos = tilt_angle_home_pps_;
 				int error;
 				driver->WriteDWord(1, GOAL_POSITION, GoalPos, &error);
 				usleep(CONTROL_PERIOD*500);
@@ -534,7 +541,7 @@ int read_and_publish()
 				switch (iStartState_) {
 					case 0: // Program tilt up				
                             //ROS_INFO("TILT UP");
-							driver->WriteDWord(1, GOAL_POSITION, TILT_ANGLE_UP_PPS, &error);
+							driver->WriteDWord(1, GOAL_POSITION, tilt_angle_up_pps_, &error);
 							if (error) {
 								ROS_ERROR("Error writing goal position");
 								process_error_code( error );
@@ -557,7 +564,7 @@ int read_and_publish()
 								}
 							else pos_tmp = (int) position_pps_;
 							
-							if (pos_tmp>(TILT_ANGLE_UP_PPS - STOP_RANGE_PPS)) {
+							if (pos_tmp>(tilt_angle_up_pps_ - STOP_RANGE_PPS)) {
 								iStartState_ = 2;
 								/*
 								// Populate our service request based on our timer callback times
@@ -579,7 +586,7 @@ int read_and_publish()
 														
 					case 2: // Program tilt down                                                        
 							//ROS_INFO("TILT DOWN");
-							driver->WriteDWord(1, GOAL_POSITION, TILT_ANGLE_DOWN_PPS, &error);
+							driver->WriteDWord(1, GOAL_POSITION, tilt_angle_down_pps_, &error);
 							if (error) {
 								ROS_ERROR("Error writing goal position");
 								process_error_code( error );
@@ -601,7 +608,7 @@ int read_and_publish()
 								process_error_code( error );
 								}
 							pos_tmp = (int) position_pps_;
-							if (pos_tmp < (TILT_ANGLE_DOWN_PPS + STOP_RANGE_PPS)) {
+							if (pos_tmp < (tilt_angle_down_pps_ + STOP_RANGE_PPS)) {
 								iStartState_=0;				
 								// Populate our service request based on our timer callback times
 								laser_assembler::AssembleScans srv;
@@ -622,7 +629,7 @@ int read_and_publish()
 					}
 
 					// Compute angle for tf publishing
-					pitch_rad = (pos_tmp - TILT_ANGLE_HOME_PPS) * PPS2RAD; 
+					pitch_rad = (pos_tmp - tilt_angle_home_pps_) * PPS2RAD;
 
 					
 				}
@@ -631,6 +638,10 @@ int read_and_publish()
 				break;
 		}  // fSwitch
 	
+    ret = driver->ReadDWord(1, PRESENT_POSITION, (long*) &position_pps_, &error);
+    pos_tmp = (int) position_pps_;
+    pitch_rad = (pos_tmp - tilt_angle_home_pps_) * PPS2RAD;
+
 	if (publish_tf_) {
 		ros::Time current_time = ros::Time::now();		
 		// first we'll publish the transforms over tf

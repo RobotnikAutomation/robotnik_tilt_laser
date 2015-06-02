@@ -150,7 +150,7 @@ public:
 	int iStartState_;
 	
 	//! Target position when called from external service
-	float target_position_;
+	float target_position_pps_;
 	
 	//! Velocity when performing a 
 	double target_velocity_;
@@ -163,6 +163,8 @@ public:
 	ros::ServiceServer srv_home_;
 	//! Ros service set target position
 	ros::ServiceServer srv_setpos_;
+	ros::ServiceServer srv_setpos_pps_;
+	ros::ServiceServer srv_setpos_degrees_;
 	//! Ros service set velocity
 	ros::ServiceServer srv_setvel_;
 
@@ -174,6 +176,9 @@ public:
     bool publish_tf_;
     bool publish_joint_;
     std::string joint_name_;
+    double tilt_angle_home_pps_;
+    double tilt_angle_up_pps_;
+    double tilt_angle_down_pps_;
 
 /*!	\fn laser_tilt_node::laser_tilt_node()
  * 	\brief Public constructor
@@ -182,7 +187,7 @@ laser_tilt_node(ros::NodeHandle h) : self_test_(), diagnostic_(),
   node_handle_(h), private_node_handle_("~"), 
   error_count_(0),
   slow_count_(0),
-  desired_freq_(50),
+  desired_freq_(20),
   freq_diag_(diagnostic_updater::FrequencyStatusParam(&desired_freq_, &desired_freq_, 0.05)   ),
   command_freq_("Command frequency check", boost::bind(&laser_tilt_node::check_command_subscriber, this, _1))
 {
@@ -199,8 +204,16 @@ laser_tilt_node(ros::NodeHandle h) : self_test_(), diagnostic_(),
 	//! Publish transform
     private_node_handle_.param("publish_tf", publish_tf_, true);
 	//! Publish transform
-    private_node_handle_.param("publish_joint", publish_joint_, false);
-    private_node_handle_.param<std::string>("joint_name", joint_name_, "hokuyo_frontal_laser_rotation_joint");
+    private_node_handle_.param("publish_joint", publish_joint_, true);
+
+
+    private_node_handle_.param("tilt_angle_home_pps", tilt_angle_home_pps_, -31000.0);
+    private_node_handle_.param("tilt_angle_floor_degrees", tilt_angle_up_pps_, 20.0);
+    private_node_handle_.param("tilt_angle_ceiling_degrees", tilt_angle_down_pps_, -20.0);
+    tilt_angle_up_pps_ = (tilt_angle_up_pps_ / PPS2DEG) + tilt_angle_home_pps_;
+    tilt_angle_down_pps_ = (tilt_angle_down_pps_ / PPS2DEG) + tilt_angle_home_pps_;
+
+    private_node_handle_.param<std::string>("joint_name", joint_name_, "hokuyo_front_laser_tilt_joint");
     if (publish_tf_) ROS_INFO("laser_tilt_node - configured to publish tf");
     if (publish_joint_) ROS_INFO("laser_tilt_node - configured to publish joint_states");
 
@@ -221,16 +234,16 @@ laser_tilt_node(ros::NodeHandle h) : self_test_(), diagnostic_(),
 
     // Create new motor driver
     // ToDo fix 	
-    // driver = new Dynamixel(port_.c_str());
-    driver = new Dynamixel("/dev/ttyUSB0");
+   driver = new Dynamixel(port_.c_str());
+//    driver = new Dynamixel("/dev/ttyUSB0");
 
     // Open device
     if( driver->Connect() == 0 ) {
-        ROS_ERROR("Failed to open USB2Dynamixel!" );
+        ROS_ERROR_STREAM("Failed to open USB2Dynamixel with port " << port_.c_str() << "!");
         exit(-1);
 		}
     else
-        ROS_INFO("Succeed to open USB2Dynamixel!");
+        ROS_INFO_STREAM("Succeed to open USB2Dynamixel with port " << port_.c_str() << "!");
 
     if(driver->SetBaudrate(DEFAULT_BAUDNUM) == true) {
     	ROS_INFO( "Succeed to change the baudrate!" );
@@ -247,9 +260,11 @@ laser_tilt_node(ros::NodeHandle h) : self_test_(), diagnostic_(),
     //! Service to home component
 	srv_home_ = private_node_handle_.advertiseService("home", &laser_tilt_node::srvCallback_Home, this);
     //! Service to set target pos
-	srv_setpos_ = private_node_handle_.advertiseService("set_position", &laser_tilt_node::srvCallback_SetPosition, this);					
+	srv_setpos_ = private_node_handle_.advertiseService("set_position", &laser_tilt_node::srvCallback_SetPosition, this);
+	srv_setpos_pps_ = private_node_handle_.advertiseService("set_position_pps", &laser_tilt_node::srvCallback_SetPositionPPS, this);
+	srv_setpos_degrees_ = private_node_handle_.advertiseService("set_position_degrees", &laser_tilt_node::srvCallback_SetPositionDegrees, this);
 	//! Service to set target vel
-	srv_setvel_= private_node_handle_.advertiseService("set_velocity", &laser_tilt_node::srvCallback_SetVelocity, this);					
+	srv_setvel_= private_node_handle_.advertiseService("set_velocity", &laser_tilt_node::srvCallback_SetVelocity, this);
 	
 	//! Publish joint states for wheel motion visualization
 	joint_state_pub_ = private_node_handle_.advertise<sensor_msgs::JointState>("/joint_states", 10);
@@ -308,7 +323,7 @@ int start(){
     // Internal state initialization
 	iState_ = 0;
 	iStartState_ = 0;	
-	target_position_ = 0.0;
+	target_position_pps_ = 0.0;
 
 	freq_diag_.clear();
 	running = true;
@@ -405,15 +420,36 @@ bool srvCallback_Home(std_srvs::Empty::Request& request, std_srvs::Empty::Respon
 	return true;
 }
 
+bool srvCallback_SetPositionPPS(robotnik_msgs::set_float_value::Request  &req,
+            robotnik_msgs::set_float_value::Response &res)
+{
+  target_position_pps_ = req.value;
+  res.ret = true;
+  iState_ = STATE_POSITION;
+  ROS_INFO("set_position : %5.2f", target_position_pps_);
+  return true;
+}
+
+bool srvCallback_SetPositionDegrees(robotnik_msgs::set_float_value::Request  &req,
+            robotnik_msgs::set_float_value::Response &res)
+{
+  target_position_pps_ = (req.value / PPS2DEG) + tilt_angle_home_pps_;
+  res.ret = true;
+  iState_ = STATE_POSITION;
+  ROS_INFO("set_position : %5.2f", target_position_pps_);
+  return true;
+}
+
 bool srvCallback_SetPosition(robotnik_msgs::set_float_value::Request  &req,
             robotnik_msgs::set_float_value::Response &res)
 {
-  target_position_ = req.value;
+  target_position_pps_ = (req.value / PPS2RAD) + tilt_angle_home_pps_;
   res.ret = true;
   iState_ = STATE_POSITION;
-  ROS_INFO("set_position : %5.2f", target_position_);
+  ROS_INFO("set_position : %5.2f", target_position_pps_);
   return true;
 }
+
 
 bool srvCallback_SetVelocity(robotnik_msgs::set_float_value::Request  &req,
             robotnik_msgs::set_float_value::Response &res)
@@ -451,7 +487,7 @@ int read_and_publish()
 		case STATE_HOME: 
 				{
 				// set initial Goal Position to 0
-				int GoalPos = TILT_ANGLE_HOME_PPS;
+				int GoalPos = tilt_angle_home_pps_;
 				int error;
 				driver->WriteDWord(1, GOAL_POSITION, GoalPos, &error);
 				usleep(CONTROL_PERIOD*500);
@@ -497,7 +533,7 @@ int read_and_publish()
 				{
 				// set target position received via service
 				// ToDo, may chekc absolute limits 
-				int GoalPos = (int) target_position_;
+				int GoalPos = (int) target_position_pps_;
 				int error;
                 ROS_INFO("GoalPos = %d", GoalPos);
 				//driver->WriteDWord(1, GOAL_POSITION, GoalPos, &error);
@@ -515,8 +551,8 @@ int read_and_publish()
 				// Component state machine   
 				switch (iStartState_) {
 					case 0: // Program tilt up				
-                                                        //ROS_INFO("TILT UP");
-							driver->WriteDWord(1, GOAL_POSITION, TILT_ANGLE_UP_PPS, &error);
+                            //ROS_INFO("TILT UP");
+							driver->WriteDWord(1, GOAL_POSITION, tilt_angle_up_pps_, &error);
 							if (error) {
 								ROS_ERROR("Error writing goal position");
 								process_error_code( error );
@@ -532,18 +568,18 @@ int read_and_publish()
 							break;
 					case 1: // Wait end of course (don't need to wait to full stop to command next pos)
 							//ROS_INFO("WAITING TILT_UP");
-                                                        ret = driver->ReadDWord(1, PRESENT_POSITION, (long*) &position_pps_, &error);                   
+                            ret = driver->ReadDWord(1, PRESENT_POSITION, (long*) &position_pps_, &error);                   
 							if (error) {
 								ROS_ERROR("Error reading position");
 								process_error_code( error );
 								}
 							else pos_tmp = (int) position_pps_;
-							if (pos_tmp>(TILT_ANGLE_UP_PPS - STOP_RANGE_PPS)) iStartState_ = 2;
+							if (pos_tmp>(tilt_angle_up_pps_ - STOP_RANGE_PPS)) iStartState_ = 2;
 							break;
 					case 2: // Program tilt down
                                                         
 							//ROS_INFO("TILT DOWN");
-							driver->WriteDWord(1, GOAL_POSITION, TILT_ANGLE_DOWN_PPS, &error);
+							driver->WriteDWord(1, GOAL_POSITION, tilt_angle_down_pps_, &error);
 							if (error) {
 								ROS_ERROR("Error writing goal position");
 								process_error_code( error );
@@ -565,20 +601,18 @@ int read_and_publish()
 								process_error_code( error );
 								}
 							pos_tmp = (int) position_pps_;
-							if (pos_tmp < (TILT_ANGLE_DOWN_PPS + STOP_RANGE_PPS)) iStartState_=0;				
+							if (pos_tmp < (tilt_angle_down_pps_ + STOP_RANGE_PPS)) iStartState_=0;				
 							break;
 					}
-
-					// Compute angle for tf publishing
-					pitch_rad = (pos_tmp - TILT_ANGLE_HOME_PPS) * PPS2RAD; 
-
-					
 				}
 				break;
 		default:
 				break;
 		}  // fSwitch
-				
+	
+    ret = driver->ReadDWord(1, PRESENT_POSITION, (long*) &position_pps_, &error);
+    pos_tmp = (int) position_pps_;
+    pitch_rad = (pos_tmp - tilt_angle_home_pps_) * PPS2RAD;
 
 	if (publish_tf_) {
 		
@@ -594,10 +628,12 @@ int read_and_publish()
 		laser_tilt_tf.transform.rotation = tf::createQuaternionMsgFromRollPitchYaw(0.0, pitch_rad, 0.0);
 		tf_broadcaster.sendTransform(laser_tilt_tf);
 		
-	}if (publish_joint_) {
+	}
+
+	if (publish_joint_) {
 		
 		robot_joint_state_.header.stamp = ros::Time::now();
-		robot_joint_state_.position[0] = -pitch_rad;
+		robot_joint_state_.position[0] = pitch_rad;
 		joint_state_pub_.publish( robot_joint_state_ );
 	}
 
