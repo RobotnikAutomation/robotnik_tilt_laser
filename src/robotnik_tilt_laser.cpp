@@ -187,13 +187,13 @@ laser_tilt_node(ros::NodeHandle h) : self_test_(), diagnostic_(),
   node_handle_(h), private_node_handle_("~"), 
   error_count_(0),
   slow_count_(0),
-  desired_freq_(50),
+  desired_freq_(20),
   freq_diag_(diagnostic_updater::FrequencyStatusParam(&desired_freq_, &desired_freq_, 0.05)   ),
   command_freq_("Command frequency check", boost::bind(&laser_tilt_node::check_command_subscriber, this, _1))
 {
     running = false;
     ros::NodeHandle laser_tilt_node_handle(node_handle_, "laser_tilt_node");
-    private_node_handle_.param<std::string>("port", port_, "/dev/ttyUSB_DXL");
+    private_node_handle_.param<std::string>("port", port_, "/dev/ttyUSB0");
     private_node_handle_.param<std::string>("base_laser_frame_id", base_laser_frame_id, "laser");
     private_node_handle_.param<std::string>("tilt_laser_frame_id", tilt_laser_frame_id, "tilt_laser");
     private_node_handle_.param<double>("x_offset", x_offset_, 0.0);
@@ -234,16 +234,16 @@ laser_tilt_node(ros::NodeHandle h) : self_test_(), diagnostic_(),
 
     // Create new motor driver
     // ToDo fix 	
-    // driver = new Dynamixel(port_.c_str());
-    driver = new Dynamixel("/dev/ttyUSB0");
+   driver = new Dynamixel(port_.c_str());
+//    driver = new Dynamixel("/dev/ttyUSB0");
 
     // Open device
     if( driver->Connect() == 0 ) {
-        ROS_ERROR("Failed to open USB2Dynamixel!" );
+        ROS_ERROR_STREAM("Failed to open USB2Dynamixel with port " << port_.c_str() << "!");
         exit(-1);
 		}
     else
-        ROS_INFO("Succeed to open USB2Dynamixel!");
+        ROS_INFO_STREAM("Succeed to open USB2Dynamixel with port " << port_.c_str() << "!");
 
     if(driver->SetBaudrate(DEFAULT_BAUDNUM) == true) {
     	ROS_INFO( "Succeed to change the baudrate!" );
@@ -604,11 +604,6 @@ int read_and_publish()
 							if (pos_tmp < (tilt_angle_down_pps_ + STOP_RANGE_PPS)) iStartState_=0;				
 							break;
 					}
-
-					// Compute angle for tf publishing
-					pitch_rad = (pos_tmp - tilt_angle_home_pps_) * PPS2RAD; 
-
-					
 				}
 				break;
 		default:
